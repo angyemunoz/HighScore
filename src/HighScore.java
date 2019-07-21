@@ -32,6 +32,7 @@ public class HighScore {
 
         } catch (Exception e) {
 
+            e.printStackTrace();
         }
         return null;
     }
