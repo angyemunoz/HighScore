@@ -1,3 +1,5 @@
+package com.exercise.highscore;
+
 public class Jugador implements Comparable<Jugador>{
 
     private String nombre;

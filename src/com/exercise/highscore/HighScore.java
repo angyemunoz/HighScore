@@ -1,3 +1,5 @@
+package com.exercise.highscore;
+
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -47,6 +49,7 @@ public class HighScore {
         List<List<Jugador>> mainList = new ArrayList<>();
         StringTokenizer tokenizer;
         Pattern pattern = Pattern.compile("([A-Z])");
+        com.exercise.highscore.Predicate<Integer> esNumNeg = p -> p ==-1;
         List<Jugador> jugadoresList = new ArrayList<>();
         int gamersNumber = -1, numTop = -1, cont = 0;
         for (String line : linesFile) {
@@ -75,13 +78,13 @@ public class HighScore {
                         gamersNumber = -1;
                         numTop = -1;
                     }
-                    if (gamersNumber == -1) gamersNumber = Integer.parseInt(nextToken);
-                    else if (numTop == -1) numTop = Integer.parseInt(nextToken);
+                    if (esNumNeg.test(gamersNumber)) gamersNumber = Integer.parseInt(nextToken);
+                    else if (esNumNeg.test(numTop)) numTop = Integer.parseInt(nextToken);
                     else {
                         jugador.setPuntaje(nextToken);
                         jugadoresList.add(jugador);
                     }
-
+                    System.out.println(esNumNeg.test(numTop));
                 }
             }
         }
