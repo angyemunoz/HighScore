@@ -1,18 +1,22 @@
 package com.exercise.highscore;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.StringTokenizer;
+import java.util.*;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class HighScore {
+
+    Predicate<Integer> isNegativeNumber = p -> p < 0;
+    Predicate<Integer> isZero = p -> p == 0;
+    Predicate<Integer> isGreaterThanZero = p -> p > 0;
+
 
     public void calculateHighScore() {
 
@@ -49,14 +53,13 @@ public class HighScore {
         List<List<Jugador>> mainList = new ArrayList<>();
         StringTokenizer tokenizer;
         Pattern pattern = Pattern.compile("([A-Z])");
-        com.exercise.highscore.Predicate<Integer> esNumNeg = p -> p ==-1;
+
+
         List<Jugador> jugadoresList = new ArrayList<>();
-        int gamersNumber = -1, numTop = -1, cont = 0;
-        for (String line : linesFile) {
-            cont++;
-            if (cont == 1) {
-                continue;
-            }
+        int gamersNumber = -1, numTop = -1;
+
+        List<String> collect = linesFile.stream().skip(1).collect(Collectors.toList());
+        for (String line : collect) {
             tokenizer = new StringTokenizer(line);
             Jugador jugador = new Jugador();
             while (tokenizer.hasMoreElements()) {
@@ -68,23 +71,22 @@ public class HighScore {
                 } else {
                     //se reinician los datos
                     //si no hay jugadores y el top indica que debe haber mas de un jugador en la lista, se crean jugadores vacios
-                    if (gamersNumber == 0 && numTop > 0) {
+                    if (isZero.test(gamersNumber) && isGreaterThanZero.test(numTop)) {
                         createEmptyGamers(jugadoresList, numTop, 0);
                     }
-                    if (gamersNumber != -1 && numTop != -1 && jugador.getNombre() == null) {
+                    if (!isNegativeNumber.test(gamersNumber) && !isNegativeNumber.test(numTop) && Objects.isNull(jugador.getNombre())) {
                         Collections.sort(jugadoresList);
                         mainList.add(jugadoresList.subList(0, numTop));
                         jugadoresList = new ArrayList<>();
                         gamersNumber = -1;
                         numTop = -1;
                     }
-                    if (esNumNeg.test(gamersNumber)) gamersNumber = Integer.parseInt(nextToken);
-                    else if (esNumNeg.test(numTop)) numTop = Integer.parseInt(nextToken);
+                    if (isNegativeNumber.test(gamersNumber)) gamersNumber = Integer.parseInt(nextToken);
+                    else if (isNegativeNumber.test(numTop)) numTop = Integer.parseInt(nextToken);
                     else {
                         jugador.setPuntaje(nextToken);
                         jugadoresList.add(jugador);
                     }
-                    System.out.println(esNumNeg.test(numTop));
                 }
             }
         }
@@ -116,9 +118,11 @@ public class HighScore {
             fileLines.add(String.valueOf(cont++));
 
             for (Jugador jugador : jugadores) {
-                if (jugador.getPuntaje() != null && !puntajeAnterior.equals(jugador.getPuntaje())) pos++;
+                if (!Objects.isNull(jugador.getPuntaje()) &&
+                        !Predicate.isEqual(puntajeAnterior).test(jugador.getPuntaje())) pos++;
+                //if (!Objects.isNull(jugador.getPuntaje()) && !puntajeAnterior.equals(jugador.getPuntaje())) pos++;
                 fileLines.add(pos + " " + jugador.getNombre() + " " + jugador.getPuntaje());
-                puntajeAnterior = jugador.getPuntaje() != null && jugador.getPuntaje().matches("-?\\d+(\\.\\d+)?") ? Integer.parseInt(jugador.getPuntaje()) : 0;
+                puntajeAnterior = !Objects.isNull(jugador.getPuntaje()) && jugador.getPuntaje().matches("-?\\d+(\\.\\d+)?") ? Integer.parseInt(jugador.getPuntaje()) : 0;
             }
         }
 
@@ -145,7 +149,7 @@ public class HighScore {
      */
     private void createEmptyGamers(List<Jugador> jugadoresList, int numTop, int ini) {
         for (int i = ini; i < numTop; i++) {
-            jugadoresList.add(new Jugador("*** ***", ""));
+            jugadoresList.add(new Jugador("***", "***"));
         }
     }
 
