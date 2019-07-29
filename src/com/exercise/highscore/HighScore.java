@@ -7,22 +7,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class HighScore {
 
-    Predicate<Integer> isNegativeNumber = p -> p < 0;
-    Predicate<Integer> isZero = p -> p == 0;
-    Predicate<Integer> isGreaterThanZero = p -> p > 0;
+    public static final String VAL_NUMBER_REGEX = "-?\\d+(\\.\\d+)?";
+    private Predicate<Integer> isNegativeNumber = p -> p < 0;
+    private Predicate<Integer> isZero = p -> p == 0;
+    private Predicate<Integer> isGreaterThanZero = p -> p > 0;
 
 
     public void calculateHighScore() {
 
         try {
             List<String> linesFile = this.readFile();
-            List<List<Jugador>> mainList = this.calculateHighScore(linesFile);
+            List<List<Gamer>> mainList = this.calculateHighScore(linesFile);
             List<String> outputLines = this.defineOutputLines(mainList);
             this.writeOutputFile(outputLines);
         } catch (IOException e) {
@@ -48,56 +47,79 @@ public class HighScore {
      * @param linesFile
      * @return
      */
-    public List<List<Jugador>> calculateHighScore(List<String> linesFile) {
+    public List<List<Gamer>> calculateHighScore(List<String> linesFile) {
 
-        List<List<Jugador>> mainList = new ArrayList<>();
-        StringTokenizer tokenizer;
-        Pattern pattern = Pattern.compile("([A-Z])");
+        List<List<Gamer>> mainList = new ArrayList<>();
+        Game game = new Game(new ArrayList<Gamer>(),-1, -1);
+        List<String> linesTableGame = linesFile.stream().skip(1).collect(Collectors.toList());
 
-
-        List<Jugador> jugadoresList = new ArrayList<>();
-        int gamersNumber = -1, numTop = -1;
-
-        List<String> collect = linesFile.stream().skip(1).collect(Collectors.toList());
-        for (String line : collect) {
-            tokenizer = new StringTokenizer(line);
-            Jugador jugador = new Jugador();
+        for (String lineTableGame : linesTableGame) {
+            StringTokenizer tokenizer = new StringTokenizer(lineTableGame);
+            Gamer gamer = new Gamer();
             while (tokenizer.hasMoreElements()) {
-                String nextToken = tokenizer.nextToken();
-                Matcher matcher = pattern.matcher(nextToken);
-                //Si el valor del token es un string, se trata del nombre del jugador
-                if (matcher.find()) {
-                    jugador.setNombre(nextToken);
-                } else {
-                    //se reinician los datos
-                    //si no hay jugadores y el top indica que debe haber mas de un jugador en la lista, se crean jugadores vacios
-                    if (isZero.test(gamersNumber) && isGreaterThanZero.test(numTop)) {
-                        createEmptyGamers(jugadoresList, numTop, 0);
-                    }
-                    if (!isNegativeNumber.test(gamersNumber) && !isNegativeNumber.test(numTop) && Objects.isNull(jugador.getNombre())) {
-                        Collections.sort(jugadoresList);
-                        mainList.add(jugadoresList.subList(0, numTop));
-                        jugadoresList = new ArrayList<>();
-                        gamersNumber = -1;
-                        numTop = -1;
-                    }
-                    if (isNegativeNumber.test(gamersNumber)) gamersNumber = Integer.parseInt(nextToken);
-                    else if (isNegativeNumber.test(numTop)) numTop = Integer.parseInt(nextToken);
-                    else {
-                        jugador.setPuntaje(nextToken);
-                        jugadoresList.add(jugador);
-                    }
-                }
+                //Si el valor del token es un string, se trata del nombre del gamer
+                game = calculateDataGame(mainList, game, gamer, tokenizer.nextToken());
             }
         }
 
-        Collections.sort(jugadoresList);
-        if (jugadoresList.size() < numTop) {
-            createEmptyGamers(jugadoresList, numTop, jugadoresList.size());
+        Collections.sort(game.getGamersList());
+        if (game.getGamersList().size() < game.getNumTop()) {
+            createEmptyGamers(game.getGamersList(), game.getNumTop(), game.getGamersList().size());
         }
-        mainList.add(jugadoresList.subList(0, numTop));
+        mainList.add(game.getGamersList().subList(0, game.getNumTop()));
 
         return mainList;
+    }
+
+    private Game calculateDataGame(List<List<Gamer>> mainList, Game game, Gamer gamer, String nextToken) {
+        if (!nextToken.matches(VAL_NUMBER_REGEX)) {
+            gamer.setName(nextToken);
+        } else {
+            //si no hay Gameres y el top indica que debe haber mas de un gamer en la lista, se crean Gameres vacios
+            this.validateCreationEmptyGamers(game.getGamersList(), game.getGamersNumber(), game.getNumTop());
+
+            //se reinician los datos
+            game = restartGame(mainList, game, gamer);
+            this.asignValueToGame(game, gamer, nextToken);
+        }
+        return game;
+    }
+
+
+    private Game restartGame(List<List<Gamer>> mainList, Game game, Gamer Gamer) {
+        if (isGameReadyToRestart(game, Gamer)) {
+            addGamerToMainListOrdered(mainList, game);
+            game = new Game(new ArrayList<Gamer>(),-1, -1);
+        }
+        return game;
+    }
+
+    private boolean isGameReadyToRestart(Game game, Gamer Gamer) {
+        return !isNegativeNumber.test(game.getGamersNumber()) && !isNegativeNumber.test(game.getNumTop()) && Objects.isNull(Gamer.getName());
+    }
+
+    private void addGamerToMainListOrdered(List<List<Gamer>> mainList, Game game) {
+        Collections.sort(game.getGamersList());
+        mainList.add(game.getGamersList().subList(0, game.getNumTop()));
+    }
+
+    private void asignValueToGame(Game game, Gamer Gamer, String nextToken) {
+        if (isNegativeNumber.test(game.getGamersNumber())) game.setGamersNumber(Integer.parseInt(nextToken));
+        else if (isNegativeNumber.test(game.getNumTop())) game.setNumTop(Integer.parseInt(nextToken));
+        else {
+            Gamer.setScore(nextToken);
+            game.getGamersList().add(Gamer);
+        }
+    }
+
+    private void validateCreationEmptyGamers(List<Gamer> GameresList, int gamersNumber, int numTop) {
+        if (isNecesaryCreateEmptyGamers(gamersNumber, numTop)) {
+            createEmptyGamers(GameresList, numTop, 0);
+        }
+    }
+
+    private boolean isNecesaryCreateEmptyGamers(int gamersNumber, int numTop) {
+        return isZero.test(gamersNumber) && isGreaterThanZero.test(numTop);
     }
 
     /**
@@ -108,25 +130,28 @@ public class HighScore {
      * @return
      * @throws IOException
      */
-    private List<String> defineOutputLines(List<List<Jugador>> mainList) throws IOException {
+    private List<String> defineOutputLines(List<List<Gamer>> mainList) throws IOException {
         List<String> fileLines = new ArrayList<>();
         int cont = 1;
-        for (List<Jugador> jugadores : mainList) {
+        for (List<Gamer> gamers : mainList) {
 
-            int pos = 1;
-            Integer puntajeAnterior = -1;
+            int pos = 1, lastScore = -1;
             fileLines.add(String.valueOf(cont++));
 
-            for (Jugador jugador : jugadores) {
-                if (!Objects.isNull(jugador.getPuntaje()) &&
-                        !Predicate.isEqual(puntajeAnterior).test(jugador.getPuntaje())) pos++;
-                //if (!Objects.isNull(jugador.getPuntaje()) && !puntajeAnterior.equals(jugador.getPuntaje())) pos++;
-                fileLines.add(pos + " " + jugador.getNombre() + " " + jugador.getPuntaje());
-                puntajeAnterior = !Objects.isNull(jugador.getPuntaje()) && jugador.getPuntaje().matches("-?\\d+(\\.\\d+)?") ? Integer.parseInt(jugador.getPuntaje()) : 0;
+            for (Gamer gamer : gamers) {
+                if (isPossibleIncreasePosition(lastScore, gamer)) pos++;
+                //if (!Objects.isNull(Gamer.getScore()) && !puntajeAnterior.equals(Gamer.getScore())) pos++;
+                fileLines.add(pos + " " + gamer.getName() + " " + gamer.getScore());
+                lastScore = !Objects.isNull(gamer.getScore()) && gamer.getScore().matches(VAL_NUMBER_REGEX) ? Integer.parseInt(gamer.getScore()) : 0;
             }
         }
 
         return fileLines;
+    }
+
+    private boolean isPossibleIncreasePosition(Integer puntajeAnterior, Gamer Gamer) {
+        return !Objects.isNull(Gamer.getScore()) &&
+                !Predicate.isEqual(puntajeAnterior).test(Gamer.getScore());
     }
 
     /**
@@ -141,15 +166,15 @@ public class HighScore {
     }
 
     /**
-     * Se crea una lista de jugadores vacios, cuando no existen jugadores para completar la lista Top
+     * Se crea una lista de Gameres vacios, cuando no existen Gameres para completar la lista Top
      *
-     * @param jugadoresList
-     * @param numTop:       numero de jugadores que necesita la lista
-     * @param ini:          numero de jugadores en la lista actual
+     * @param gamersList
+     * @param numTop:       numero de Gameres que necesita la lista
+     * @param ini:          numero de Gameres en la lista actual
      */
-    private void createEmptyGamers(List<Jugador> jugadoresList, int numTop, int ini) {
+    private void createEmptyGamers(List<Gamer> gamersList, int numTop, int ini) {
         for (int i = ini; i < numTop; i++) {
-            jugadoresList.add(new Jugador("***", "***"));
+            gamersList.add(new Gamer("***", "***"));
         }
     }
 
