@@ -4,6 +4,7 @@ public class Gamer implements Comparable<Gamer>{
 
     private String name;
     private String score;
+    private int position;
 
 
     public Gamer() {
@@ -30,6 +31,14 @@ public class Gamer implements Comparable<Gamer>{
         this.score = score;
     }
 
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
     @Override
     public int compareTo(Gamer o) {
         if(o.getScore() != null)
@@ -43,5 +52,9 @@ public class Gamer implements Comparable<Gamer>{
                 "nombre='" + name + '\'' +
                 ", puntaje=" + score +
                 '}';
+    }
+
+    public static Gamer createDefaultGamer(){
+        return new Gamer("***","***");
     }
 }
